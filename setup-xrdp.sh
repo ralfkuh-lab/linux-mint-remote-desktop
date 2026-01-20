@@ -60,8 +60,7 @@ info "Sudo-Rechte verifiziert."
 
 # Linux Mint Version erkennen und prüfen
 if [[ -f /etc/linuxmint/info ]]; then
-    source /etc/linuxmint/info
-    MINT_VERSION="${RELEASE}"
+    MINT_VERSION=$(grep "^RELEASE=" /etc/linuxmint/info | cut -d'=' -f2)
     info "Erkannte Linux Mint Version: ${MINT_VERSION}"
 
     # Prüfe ob Version 21.x oder 22.x
@@ -129,17 +128,17 @@ else
     info "xrdp bereits installiert, überspringe Paketinstallation."
 fi
 
-# Polkit-Regel für Cinnamon erstellen
+# Polkit-Regel für Cinnamon erstellen (colord-Berechtigungen)
 info "Erstelle Polkit-Regel für Cinnamon..."
-POLKIT_FILE="/etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla"
+POLKIT_FILE="/etc/polkit-1/rules.d/45-allow-colord.rules"
 
 sudo tee "${POLKIT_FILE}" > /dev/null << 'EOF'
-[Allow Colord all Users]
-Identity=unix-user:*
-Action=org.freedesktop.color-manager.create-device;org.freedesktop.color-manager.create-profile;org.freedesktop.color-manager.delete-device;org.freedesktop.color-manager.delete-profile;org.freedesktop.color-manager.modify-device;org.freedesktop.color-manager.modify-profile
-ResultAny=no
-ResultInactive=no
-ResultActive=yes
+// Erlaubt colord-Aktionen für lokale aktive Sitzungen (xrdp)
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.color-manager.") == 0) {
+        return polkit.Result.YES;
+    }
+});
 EOF
 
 success "Polkit-Regel erstellt: ${POLKIT_FILE}"
