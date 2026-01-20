@@ -230,4 +230,4 @@ Falls Ihr Problem hier nicht aufgeführt ist:
 
 1. Prüfen Sie die Log-Dateien auf Fehlermeldungen
 2. Suchen Sie nach der Fehlermeldung im Internet
-3. Erstellen Sie ein Issue im [GitHub Repository](https://github.com/ralfkret/linux-mint-remote-desktop/issues)
+3. Erstellen Sie ein Issue im [GitHub Repository](https://github.com/ralfkuh-lab/linux-mint-remote-desktop/issues)

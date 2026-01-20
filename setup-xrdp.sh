@@ -9,7 +9,7 @@
 #
 # Autor: Ralf
 # Lizenz: MIT
-# Repository: https://github.com/ralfkret/linux-mint-remote-desktop
+# Repository: https://github.com/ralfkuh-lab/linux-mint-remote-desktop
 #
 
 set -e

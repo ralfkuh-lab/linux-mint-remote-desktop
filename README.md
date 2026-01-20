@@ -20,7 +20,7 @@ Automatisiertes Setup-Script für Remote Desktop Zugriff auf Linux Mint mit Cinn
 
 ```bash
 # Repository klonen
-git clone https://github.com/ralfkret/linux-mint-remote-desktop.git
+git clone https://github.com/ralfkuh-lab/linux-mint-remote-desktop.git
 cd linux-mint-remote-desktop
 
 # Script ausführbar machen und starten
