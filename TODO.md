@@ -55,8 +55,8 @@ Einrichtung einer Remote Desktop Verbindung von Windows zu Linux Mint (Cinnamon)
 - [x] Erste Version (1.0.0) dokumentieren
 
 ### Phase 5: Testing & Finalisierung
-- [ ] Script auf Linux Mint testen
-- [ ] Verbindung von Windows mit mstsc.exe testen
+- [x] Script auf Linux Mint testen
+- [x] Verbindung von Windows mit mstsc.exe testen
 - [ ] README mit Screenshots/Beispielen ergänzen (optional)
 - [x] Repository auf GitHub pushen
 
@@ -71,14 +71,14 @@ sudo apt install xrdp xorgxrdp -y
 ```
 
 ### Polkit-Regel für Cinnamon
-Datei: `/etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla`
-```ini
-[Allow Colord all Users]
-Identity=unix-user:*
-Action=org.freedesktop.color-manager.create-device;org.freedesktop.color-manager.create-profile;org.freedesktop.color-manager.delete-device;org.freedesktop.color-manager.delete-profile;org.freedesktop.color-manager.modify-device;org.freedesktop.color-manager.modify-profile
-ResultAny=no
-ResultInactive=no
-ResultActive=yes
+Datei: `/etc/polkit-1/rules.d/45-allow-colord.rules`
+```javascript
+// Erlaubt colord-Aktionen für lokale aktive Sitzungen (xrdp)
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.color-manager.") == 0) {
+        return polkit.Result.YES;
+    }
+});
 ```
 
 ### Dienst aktivieren

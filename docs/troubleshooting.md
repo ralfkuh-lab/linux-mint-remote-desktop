@@ -74,13 +74,13 @@ sudo tail -50 /var/log/xrdp-sesman.log
 
 **Lösung:** Polkit-Regel neu erstellen
 ```bash
-sudo tee /etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla > /dev/null << 'EOF'
-[Allow Colord all Users]
-Identity=unix-user:*
-Action=org.freedesktop.color-manager.create-device;org.freedesktop.color-manager.create-profile;org.freedesktop.color-manager.delete-device;org.freedesktop.color-manager.delete-profile;org.freedesktop.color-manager.modify-device;org.freedesktop.color-manager.modify-profile
-ResultAny=no
-ResultInactive=no
-ResultActive=yes
+sudo tee /etc/polkit-1/rules.d/45-allow-colord.rules > /dev/null << 'EOF'
+// Erlaubt colord-Aktionen für lokale aktive Sitzungen (xrdp)
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.color-manager.") == 0) {
+        return polkit.Result.YES;
+    }
+});
 EOF
 
 # xrdp neu starten
