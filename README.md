@@ -37,11 +37,19 @@ Falls Sie das Script nicht verwenden möchten, können Sie xrdp auch manuell ins
 sudo apt update
 sudo apt install xrdp xorgxrdp -y
 
-# Polkit-Regel erstellen (verhindert Authentifizierungsdialog)
-sudo tee /etc/polkit-1/rules.d/45-allow-colord.rules > /dev/null << 'EOF'
-// Erlaubt colord-Aktionen für lokale aktive Sitzungen (xrdp)
+# Polkit-Regel erstellen (verhindert Authentifizierungsdialoge)
+# Siehe Abschnitt "Polkit-Regeln" für Details zu den Stufen
+sudo tee /etc/polkit-1/rules.d/45-xrdp-allow.rules > /dev/null << 'EOF'
+// Polkit-Regeln für xrdp Remote Desktop Sitzungen
 polkit.addRule(function(action, subject) {
     if (action.id.indexOf("org.freedesktop.color-manager.") == 0) {
+        return polkit.Result.YES;
+    }
+    if (action.id == "org.freedesktop.packagekit.system-sources-refresh" ||
+        action.id == "org.freedesktop.packagekit.system-network-proxy-configure") {
+        return polkit.Result.YES;
+    }
+    if (action.id == "org.freedesktop.Flatpak.appstream-update") {
         return polkit.Result.YES;
     }
 });
@@ -69,6 +77,35 @@ hostname -I | awk '{print $1}'
    - Wählen Sie "Xorg" als Session-Typ (falls gefragt)
    - Geben Sie Ihren Linux-Benutzernamen und Passwort ein
    - Der Cinnamon-Desktop sollte erscheinen
+
+## Polkit-Regeln
+
+Bei xrdp-Sitzungen können häufig Authentifizierungsdialoge erscheinen, da Polkit diese als "nicht-lokal" behandelt. Das Setup-Script bietet zwei Stufen zur Reduzierung dieser Dialoge:
+
+### Stufe 1: Basis (empfohlen)
+
+Erlaubt grundlegende Hintergrundaktionen ohne Authentifizierung:
+
+| Dienst | Erlaubte Aktionen | Risiko |
+|--------|-------------------|--------|
+| color-manager | Farbprofile verwalten | Gering |
+| PackageKit | Paketquellen aktualisieren | Gering |
+| Flatpak | Appstream-Updates | Gering |
+
+### Stufe 2: Erweitert
+
+Zusätzlich zu Stufe 1:
+
+| Dienst | Erlaubte Aktionen | Risiko |
+|--------|-------------------|--------|
+| NetworkManager | Netzwerkeinstellungen ändern | Mittel |
+| UDisks2 | Laufwerke mounten | Mittel |
+
+### Polkit-Regel prüfen
+
+```bash
+cat /etc/polkit-1/rules.d/45-xrdp-allow.rules
+```
 
 ## Firewall-Konfiguration
 
@@ -104,7 +141,7 @@ Um xrdp vollständig zu entfernen:
 sudo systemctl stop xrdp
 sudo systemctl disable xrdp
 sudo apt remove --purge xrdp xorgxrdp -y
-sudo rm -f /etc/polkit-1/rules.d/45-allow-colord.rules
+sudo rm -f /etc/polkit-1/rules.d/45-xrdp-allow.rules
 ```
 
 ## Fehlerbehebung

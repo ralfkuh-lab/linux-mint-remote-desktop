@@ -101,7 +101,7 @@ echo "  1. System-Paketliste aktualisieren"
 if [[ "${XRDP_INSTALLED}" == false ]]; then
     echo "  2. xrdp und xorgxrdp installieren"
 fi
-echo "  3. Polkit-Regel für Cinnamon erstellen"
+echo "  3. Polkit-Regeln für xrdp erstellen (reduziert Auth-Dialoge)"
 echo "  4. xrdp-Dienst aktivieren und starten"
 echo ""
 read -p "Möchten Sie fortfahren? (j/N): " CONFIRM
@@ -109,6 +109,17 @@ if [[ ! "${CONFIRM}" =~ ^[jJyY]$ ]]; then
     info "Installation abgebrochen."
     exit 0
 fi
+
+# Polkit-Stufe abfragen
+echo ""
+echo "Polkit-Regeln reduzieren Authentifizierungsdialoge bei Remote-Sitzungen."
+echo ""
+echo "Verfügbare Stufen:"
+echo "  1) Basis     - color-manager, PackageKit, Flatpak (empfohlen)"
+echo "  2) Erweitert - zusätzlich NetworkManager, UDisks2"
+echo ""
+read -p "Welche Stufe möchten Sie installieren? (1/2) [1]: " POLKIT_LEVEL
+POLKIT_LEVEL=${POLKIT_LEVEL:-1}
 
 echo ""
 info "Starte Installation..."
@@ -128,19 +139,58 @@ else
     info "xrdp bereits installiert, überspringe Paketinstallation."
 fi
 
-# Polkit-Regel für Cinnamon erstellen (colord-Berechtigungen)
-info "Erstelle Polkit-Regel für Cinnamon..."
-POLKIT_FILE="/etc/polkit-1/rules.d/45-allow-colord.rules"
+# Polkit-Regel für xrdp-Sitzungen erstellen
+info "Erstelle Polkit-Regeln für xrdp (Stufe ${POLKIT_LEVEL})..."
+POLKIT_FILE="/etc/polkit-1/rules.d/45-xrdp-allow.rules"
 
-sudo tee "${POLKIT_FILE}" > /dev/null << 'EOF'
-// Erlaubt colord-Aktionen für lokale aktive Sitzungen (xrdp)
+# Alte Regel entfernen falls vorhanden
+if [[ -f "/etc/polkit-1/rules.d/45-allow-colord.rules" ]]; then
+    sudo rm "/etc/polkit-1/rules.d/45-allow-colord.rules"
+    info "Alte Polkit-Regel entfernt."
+fi
+
+# Basis-Regel (immer enthalten)
+POLKIT_RULES='// Polkit-Regeln für xrdp Remote Desktop Sitzungen
+// Verhindert häufige Authentifizierungsdialoge bei Remote-Verbindungen
+
 polkit.addRule(function(action, subject) {
+    // Color Management (Farbprofile)
     if (action.id.indexOf("org.freedesktop.color-manager.") == 0) {
         return polkit.Result.YES;
     }
-});
-EOF
 
+    // PackageKit (Software-Updates, Paketquellen)
+    if (action.id == "org.freedesktop.packagekit.system-sources-refresh" ||
+        action.id == "org.freedesktop.packagekit.system-network-proxy-configure") {
+        return polkit.Result.YES;
+    }
+
+    // Flatpak (Appstream-Updates)
+    if (action.id == "org.freedesktop.Flatpak.appstream-update") {
+        return polkit.Result.YES;
+    }'
+
+# Erweiterte Regeln hinzufügen wenn gewählt
+if [[ "${POLKIT_LEVEL}" == "2" ]]; then
+    POLKIT_RULES+='
+
+    // NetworkManager (Netzwerkeinstellungen lesen)
+    if (action.id == "org.freedesktop.NetworkManager.settings.modify.system" ||
+        action.id == "org.freedesktop.NetworkManager.network-control") {
+        return polkit.Result.YES;
+    }
+
+    // UDisks2 (Laufwerke mounten)
+    if (action.id.indexOf("org.freedesktop.udisks2.") == 0) {
+        return polkit.Result.YES;
+    }'
+fi
+
+# Regel abschließen
+POLKIT_RULES+='
+});'
+
+echo "${POLKIT_RULES}" | sudo tee "${POLKIT_FILE}" > /dev/null
 success "Polkit-Regel erstellt: ${POLKIT_FILE}"
 
 # xrdp-Dienst aktivieren und starten
